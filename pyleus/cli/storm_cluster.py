@@ -15,6 +15,7 @@ TOPOLOGY_BUILDER_CLASS = "com.yelp.pyleus.PyleusTopologyBuilder"
 LOCAL_OPTION = "--local"
 DEBUG_OPTION = "--debug"
 STORM_JAR_JVM_OPTS = "STORM_JAR_JVM_OPTS"
+PROVIDER_ARG_PFIX = "--provider."
 
 
 def _watch_over_storm(storm_pid):
@@ -43,6 +44,17 @@ def _get_storm_cmd_env(jvm_opts):
 
     return None
 
+def _add_plugins_to_cmd(cmd, plugins):
+    """Adds supplied plugin to the supplied java command.
+    """
+    # Pass any plugin classes to the topology builder as
+    # --provider.<alias>=canonical.provider.class.name
+    # Example: --provider.kafka=com.yelp.pyleus.kafka.KafkaSpoutProvider
+    cmd += [
+        "{0}{1}={2}".format(PROVIDER_ARG_PFIX, k, v) 
+        for (k, v) 
+        in plugins
+    ]
 
 class StormCluster(object):
     """Object representing an interface to a Storm cluster.
@@ -50,7 +62,7 @@ class StormCluster(object):
     """
 
     def __init__(self, storm_cmd_path, nimbus_host, nimbus_port, verbose,
-                 jvm_opts):
+                 jvm_opts, plugins):
         """Create the cluster object."""
 
         self.storm_cmd_path = storm_cmd_path
@@ -65,6 +77,7 @@ class StormCluster(object):
         self.nimbus_port = nimbus_port
         self.verbose = verbose
         self.jvm_opts = jvm_opts
+        self.plugins = plugins
 
     def _build_storm_cmd(self, cmd):
         storm_cmd = [self.storm_cmd_path]
@@ -103,6 +116,8 @@ class StormCluster(object):
         """Submit the pyleus topology jar to the Storm cluster."""
         cmd = ["jar", jar_path, TOPOLOGY_BUILDER_CLASS]
 
+        _add_plugins_to_cmd(cmd, self.plugins)
+
         self._exec_storm_cmd(cmd)
 
     def list(self):
@@ -128,7 +143,7 @@ class LocalStormCluster(object):
     All the requests are basically translated into Storm commands.
     """
 
-    def run(self, storm_cmd_path, jar_path, debug, jvm_opts):
+    def run(self, storm_cmd_path, jar_path, debug, jvm_opts, plugins):
         """Run locally a pyleus topology jar.
 
         Note: In order to trigger the local mode for the selcted topology,
@@ -144,6 +159,8 @@ class LocalStormCluster(object):
 
         if debug:
             storm_cmd.append(DEBUG_OPTION)
+
+        _add_plugins_to_cmd(storm_cmd, plugins)
 
         env = _get_storm_cmd_env(jvm_opts)
 

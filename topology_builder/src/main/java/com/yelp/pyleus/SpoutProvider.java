@@ -7,6 +7,6 @@ import com.yelp.pyleus.spec.SpoutSpec;
 
 public interface SpoutProvider {
 
-   IRichSpout handleKafkaSpout(final TopologyBuilder builder,
+   IRichSpout provide(final TopologyBuilder builder,
             final SpoutSpec spec);
 }

@@ -24,7 +24,8 @@ def run_topology_locally(jar_path, configs):
         configs.storm_cmd_path,
         jar_path,
         configs.debug,
-        configs.jvm_opts)
+        configs.jvm_opts,
+        configs.plugins)
 
 
 def submit_topology(jar_path, configs):
@@ -34,7 +35,8 @@ def submit_topology(jar_path, configs):
         configs.nimbus_host,
         configs.nimbus_port,
         configs.verbose,
-        configs.jvm_opts).submit(jar_path)
+        configs.jvm_opts,
+        configs.plugins).submit(jar_path)
 
 
 def list_topologies(configs):
@@ -44,7 +46,8 @@ def list_topologies(configs):
         configs.nimbus_host,
         configs.nimbus_port,
         configs.verbose,
-        configs.jvm_opts).list()
+        configs.jvm_opts,
+        configs.plugins).list()
 
 
 def kill_topology(configs):
@@ -54,7 +57,8 @@ def kill_topology(configs):
         configs.nimbus_host,
         configs.nimbus_port,
         configs.verbose,
-        configs.jvm_opts).kill(configs.topology_name, configs.wait_time)
+        configs.jvm_opts,
+        configs.plugins).kill(configs.topology_name, configs.wait_time)
 
 
 def is_jar(jar_path):

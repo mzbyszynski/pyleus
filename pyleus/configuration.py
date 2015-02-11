@@ -43,6 +43,12 @@ invocations.
 
    # list of packages to always include in your topologies
    include_packages: foo bar<4.0 baz==0.1
+
+   [plugins]
+   # list any external spout providers referenced in your yaml and the
+   # java classes they correspond to.
+   amqp: com.my.AMQPSpoutProvider
+   jms: com.some.other.JMSProviderClass
 """
 from __future__ import absolute_import
 
@@ -54,6 +60,7 @@ from pyleus.utils import expand_path
 from pyleus.exception import ConfigurationError
 from pyleus.compat import configparser
 
+PLUGIN_SECTION = "plugins"
 
 # Configuration files paths in order of increasing precedence
 # Please keep in sync with module docstring
@@ -68,7 +75,7 @@ Configuration = collections.namedtuple(
     "base_jar config_file debug func include_packages output_jar \
      pypi_index_url nimbus_host nimbus_port storm_cmd_path \
      system_site_packages topology_path topology_jar topology_name verbose \
-     wait_time jvm_opts"
+     wait_time jvm_opts plugins"
 )
 """Namedtuple containing all pyleus configuration values."""
 
@@ -91,6 +98,7 @@ DEFAULTS = Configuration(
     verbose=False,
     wait_time=None,
     jvm_opts=None,
+    plugins=[],
 )
 
 
@@ -132,12 +140,14 @@ def load_configuration(cmd_line_file):
     config = configparser.SafeConfigParser()
     config.read(config_files_hierarchy)
 
-    configs = update_configuration(
-        DEFAULTS,
-        dict(
-            (config_name, config_value)
-            for section in config.sections()
-            for config_name, config_value in config.items(section)
-        )
+    update_dict = dict(
+        (config_name, config_value)
+        for section in config.sections() if section != PLUGIN_SECTION
+        for config_name, config_value in config.items(section)
     )
+
+    if (config.has_section(PLUGIN_SECTION)):
+        update_dict["plugins"] = config.items(PLUGIN_SECTION)
+
+    configs = update_configuration(DEFAULTS, update_dict)
     return configs

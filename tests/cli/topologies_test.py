@@ -39,6 +39,7 @@ def test_submit_topology(configs):
         configs.nimbus_port,
         configs.verbose,
         configs.jvm_opts,
+        configs.plugins,
     )
 
     mock_storm_cluster.submit.assert_called_once_with(mock.sentinel.jar_path)
@@ -57,6 +58,7 @@ def test_kill_topology(configs):
         configs.nimbus_port,
         configs.verbose,
         configs.jvm_opts,
+        configs.plugins,
     )
 
     mock_storm_cluster.kill.assert_called_once_with(configs.topology_name, configs.wait_time)
@@ -75,6 +77,7 @@ def test_list_topologies(configs):
         configs.nimbus_port,
         configs.verbose,
         configs.jvm_opts,
+        configs.plugins,
     )
 
     mock_storm_cluster.list.assert_called_once_with()

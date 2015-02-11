@@ -4,6 +4,7 @@ import pytest
 
 from pyleus.cli.storm_cluster import _get_storm_cmd_env
 from pyleus.cli.storm_cluster import STORM_JAR_JVM_OPTS
+from pyleus.cli.storm_cluster import PROVIDER_ARG_PFIX
 from pyleus.cli.storm_cluster import StormCluster
 from pyleus.cli.storm_cluster import TOPOLOGY_BUILDER_CLASS
 from pyleus.testing import mock
@@ -34,6 +35,7 @@ class TestStormCluster(object):
             mock.sentinel.nimbus_port,
             mock.sentinel.verbose,
             mock.sentinel.jvm_opts,
+            [],
         )
 
     def test__build_storm_cmd_no_port(self, cluster):
@@ -56,3 +58,15 @@ class TestStormCluster(object):
             cluster.submit(mock.sentinel.jar_path)
 
         mock_exec.assert_called_once_with(["jar", mock.sentinel.jar_path, TOPOLOGY_BUILDER_CLASS])
+
+    def test_submit_with_plugins(self, cluster):
+        plugins = [("alias", "plugin.Class1"), ("otherone", "plugin.OtherOne")]
+        expected = (["jar", mock.sentinel.jar_path, TOPOLOGY_BUILDER_CLASS] 
+            + [PROVIDER_ARG_PFIX+a+"="+b for (a,b) in plugins])
+
+        cluster.plugins.extend(plugins)
+        with mock.patch.object(cluster, '_exec_storm_cmd', autospec=True) as mock_exec:
+            cluster.submit(mock.sentinel.jar_path)
+
+        mock_exec.assert_called_once_with(expected)
+

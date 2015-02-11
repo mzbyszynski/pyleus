@@ -2,6 +2,7 @@ package com.yelp.pyleus;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,11 +18,6 @@ import backtype.storm.topology.IRichSpout;
 import backtype.storm.topology.SpoutDeclarer;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
-import storm.kafka.KafkaSpout;
-import storm.kafka.KeyValueSchemeAsMultiScheme;
-import storm.kafka.SpoutConfig;
-import storm.kafka.StringKeyValueScheme;
-import storm.kafka.ZkHosts;
 
 import com.yelp.pyleus.bolt.PythonBolt;
 import com.yelp.pyleus.spec.BoltSpec;
@@ -39,11 +35,16 @@ public class PyleusTopologyBuilder {
 
     public static final PythonComponentsFactory pyFactory = new PythonComponentsFactory();
 
-    public static void handleBolt(final TopologyBuilder builder, final BoltSpec spec,
-        final TopologySpec topologySpec) {
+    private static final String USAGE = "Usage: PyleusTopologyBuilder [--local [--debug]]";
+    private static final String PROVIDER_ARG_PFIX = "--provider.";
 
-        PythonBolt bolt = pyFactory.createPythonBolt(spec.module,
-                spec.options, topologySpec.logging_config, topologySpec.serializer);
+    private static final Map<String, String> providers = new HashMap<String, String>();
+
+    public static void handleBolt(final TopologyBuilder builder, final BoltSpec spec,
+            final TopologySpec topologySpec) {
+
+        PythonBolt bolt = pyFactory.createPythonBolt(spec.module, spec.options,
+                topologySpec.logging_config, topologySpec.serializer);
 
         if (spec.output_fields != null) {
             bolt.setOutputFields(spec.output_fields);
@@ -96,11 +97,11 @@ public class PyleusTopologyBuilder {
     }
 
     public static void handleSpout(final TopologyBuilder builder, final SpoutSpec spec,
-        final TopologySpec topologySpec) {
+            final TopologySpec topologySpec) {
 
         IRichSpout spout;
-        if (spec.type.equals("kafka")) {
-            spout = handleKafkaSpout(builder, spec);
+        if (providers.containsKey(spec.type)) {
+            spout = handleProvidedSpout(builder, spec);
         } else {
             spout = handlePythonSpout(builder, spec, topologySpec);
         }
@@ -117,61 +118,29 @@ public class PyleusTopologyBuilder {
         }
     }
 
-    public static IRichSpout handleKafkaSpout(
-            @SuppressWarnings("unused") final TopologyBuilder builder,
-            final SpoutSpec spec) {
-        String topic = (String) spec.options.get("topic");
-        if (topic == null) {
-            throw new RuntimeException("Kafka spout must have topic");
+    public static IRichSpout handleProvidedSpout(final TopologyBuilder builder, final SpoutSpec spec) {
+        String providerClassName = providers.get(spec.type);
+        try {
+            Class<?> providerClass = Class.forName(providerClassName);
+            if (!SpoutProvider.class.isAssignableFrom(providerClass))
+                throw new RuntimeException(String.format("%s does not implement SpoutProvider.",
+                        providerClassName));
+            SpoutProvider provider = (SpoutProvider) providerClass.newInstance();
+            return provider.provide(builder, spec);
+        } catch (ClassNotFoundException ex) {
+            throw new RuntimeException(ex);
+        } catch (InstantiationException ex) {
+            throw new RuntimeException(ex);
+        } catch (IllegalAccessException ex) {
+            throw new RuntimeException(ex);
         }
-
-        String zkHosts = (String) spec.options.get("zk_hosts");
-        if (zkHosts == null) {
-            throw new RuntimeException("Kafka spout must have zk_hosts");
-        }
-
-        String zkRoot = (String) spec.options.get("zk_root");
-        if (zkRoot == null) {
-            zkRoot = String.format(KAFKA_ZK_ROOT_FMT, spec.name);
-        }
-
-        String consumerId = (String) spec.options.get("consumer_id");
-        if (consumerId == null) {
-            consumerId = String.format(KAFKA_CONSUMER_ID_FMT, spec.name);
-        }
-
-        SpoutConfig config = new SpoutConfig(
-            new ZkHosts(zkHosts),
-            topic,
-            zkRoot,
-            consumerId
-        );
-
-        Boolean forceFromStart = (Boolean) spec.options.get("from_start");
-        if (forceFromStart != null) {
-            config.forceFromStart = forceFromStart;
-        }
-
-        Long startOffsetTime = (Long) spec.options.get("start_offset_time");
-        if (startOffsetTime != null) {
-            config.startOffsetTime = startOffsetTime;
-        }
-
-        // TODO: this mandates that messages are UTF-8. We should allow for binary data
-        // in the future, or once users can have Java components, let them provide their
-        // own JSON serialization method. Or wait on STORM-138.
-        config.scheme = new KeyValueSchemeAsMultiScheme(new StringKeyValueScheme());
-
-        return new KafkaSpout(config);
     }
 
-    public static IRichSpout handlePythonSpout(
-            @SuppressWarnings("unused") final TopologyBuilder builder,
-            final SpoutSpec spec,
+    public static IRichSpout handlePythonSpout(final TopologyBuilder builder, final SpoutSpec spec,
             final TopologySpec topologySpec) {
 
-        PythonSpout spout = pyFactory.createPythonSpout(spec.module,
-                spec.options, topologySpec.logging_config, topologySpec.serializer);
+        PythonSpout spout = pyFactory.createPythonSpout(spec.module, spec.options,
+                topologySpec.logging_config, topologySpec.serializer);
 
         if (spec.output_fields != null) {
             spout.setOutputFields(spec.output_fields);
@@ -195,14 +164,16 @@ public class PyleusTopologyBuilder {
             } else if (component.isSpout()) {
                 handleSpout(builder, component.spout, spec);
             } else {
-                throw new RuntimeException(String.format("Unknown component: only bolts and spouts are supported."));
+                throw new RuntimeException(
+                        String.format("Unknown component: only bolts and spouts are supported."));
             }
         }
 
         return builder.createTopology();
     }
 
-    private static InputStream getYamlInputStream(final String filename) throws FileNotFoundException {
+    private static InputStream getYamlInputStream(final String filename)
+            throws FileNotFoundException {
         return PyleusTopologyBuilder.class.getResourceAsStream(filename);
     }
 
@@ -217,7 +188,8 @@ public class PyleusTopologyBuilder {
         }
     }
 
-    private static void runLocally(final String topologyName, final StormTopology topology, boolean debug, final String serializer) {
+    private static void runLocally(final String topologyName, final StormTopology topology,
+            boolean debug, final String serializer) {
         Config conf = new Config();
         setSerializer(conf, serializer);
         conf.setDebug(debug);
@@ -226,6 +198,7 @@ public class PyleusTopologyBuilder {
         final LocalCluster cluster = new LocalCluster();
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
             public void run() {
                 try {
                     cluster.shutdown();
@@ -249,28 +222,31 @@ public class PyleusTopologyBuilder {
         boolean runLocally = false;
         boolean debug = false;
 
-        if (args.length > 2) {
-            System.err.println("Usage: PyleusTopologyBuilder [--local [--debug]]");
-            System.exit(1);
-        }
-
-        if (args.length == 1) {
-            if (args[0].equals("--local")) {
+        for (String arg : args) {
+            if (arg.equals("--local")) {
                 runLocally = true;
-            } else {
-                System.err.println("Usage: PyleusTopologyBuilder [--local [--debug]]");
-                System.exit(1);
-            }
-        }
-
-        if (args.length == 2) {
-            if (args[0].equals("--local") && args[1].equals("--debug")) {
-                runLocally = true;
+            } else if (arg.equals("--debug")) {
                 debug = true;
+            } else if (arg.startsWith(PROVIDER_ARG_PFIX)) {
+                String[] providerTuple = arg.replace(PROVIDER_ARG_PFIX, "").split("=");
+                if (providerTuple.length != 2) {
+                    System.err.println("Invalid parameter: " + arg);
+                    System.err.println(USAGE);
+                    System.exit(1);
+                }
+                System.out.println("provider: " + providerTuple[0] + " = " + providerTuple[1]);
+                providers.put(providerTuple[0], providerTuple[1]);
             } else {
-                System.err.println("Usage: PyleusTopologyBuilder [--local [--debug]]");
+                System.err.println("Invalid parameter: " + arg);
+                System.err.println(USAGE);
                 System.exit(1);
             }
+        }
+
+        if (debug && !runLocally) {
+            System.err.println("--debug option is only available when running locally.");
+            System.err.println(USAGE);
+            System.exit(1);
         }
 
         final InputStream yamlInputStream;

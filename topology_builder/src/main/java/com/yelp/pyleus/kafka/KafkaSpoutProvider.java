@@ -17,7 +17,7 @@ public class KafkaSpoutProvider implements SpoutProvider {
    public static final String KAFKA_CONSUMER_ID_FMT = "pyleus-%s";
 
    @Override
-   public IRichSpout handleKafkaSpout(TopologyBuilder builder, SpoutSpec spec) {
+   public IRichSpout provide(TopologyBuilder builder, SpoutSpec spec) {
       String topic = (String) spec.options.get("topic");
       if (topic == null) { throw new RuntimeException("Kafka spout must have topic"); }
 
