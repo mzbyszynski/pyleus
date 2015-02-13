@@ -176,14 +176,28 @@ def _copy_dir_content(src, dst, exclude):
         else:
             shutil.copy2(t, dst)
 
+def _extract_plugin_jars(jar_paths, dest_dir):
+    if jar_paths is None:
+        return
+    for path in jar_paths:
+        for f in glob.glob(path):
+            if os.path.isfile(f) and not f.endswith(".jar"):
+                continue
+            elif os.path.isdir(f):
+                for sub in glob.glob(os.path.join(f, "*.jar")):
+                    _open_jar(sub).extractall(dest_dir)
+            else:
+                _open_jar(f).extractall(dest_dir)
 
 def _create_pyleus_jar(original_topology_spec, topology_dir, base_jar,
                        output_jar, zip_file, tmp_dir, include_packages,
-                       system_site_packages, pypi_index_url, verbose):
+                       include_java_jars, system_site_packages, 
+                       pypi_index_url, verbose):
     """Coordinate the creation of the the topology JAR:
 
         - Validate the topology
         - Extract the base JAR into a temporary directory
+        - Copy plugin jar contents into the directory
         - Copy all source files into the directory
         - If using virtualenv, create it and install dependencies
         - Re-pack the temporary directory into the final JAR
@@ -200,6 +214,8 @@ def _create_pyleus_jar(original_topology_spec, topology_dir, base_jar,
         req = None
 
     _validate_venv(topology_dir, venv)
+
+    _extract_plugin_jars(include_java_jars, tmp_dir)
 
     # Extract pyleus base jar content in a tmp dir
     zip_file.extractall(tmp_dir)
@@ -278,6 +294,11 @@ def build_topology_jar(configs):
     if configs.include_packages is not None:
         include_packages = configs.include_packages.split(" ")
 
+    # Extract list of java plugin jars to add to the output_jar
+    include_java_jars = None
+    if configs.include_java_jars is not None:
+        include_java_jars = configs.include_java_jars.split(" ")
+
     # Open the base jar as a zip
     zip_file = _open_jar(base_jar)
 
@@ -293,6 +314,7 @@ def build_topology_jar(configs):
                 zip_file=zip_file,
                 tmp_dir=tmp_dir,
                 include_packages=include_packages,
+                include_java_jars=include_java_jars,
                 system_site_packages=configs.system_site_packages,
                 pypi_index_url=configs.pypi_index_url,
                 verbose=configs.verbose,

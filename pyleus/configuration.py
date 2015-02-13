@@ -44,6 +44,10 @@ invocations.
    # list of packages to always include in your topologies
    include_packages: foo bar<4.0 baz==0.1
 
+   # list of .jar files or directories of .jar files that will be 
+   # added to the classpath of your topology separated by spaces.
+   include_java_jars: /home/my/plugin/some.jar /home/also/works/for/directories
+
    [plugins]
    # list any external spout providers referenced in your yaml and the
    # java classes they correspond to.
@@ -72,8 +76,8 @@ CONFIG_FILES_PATH = [
 
 Configuration = collections.namedtuple(
     "Configuration",
-    "base_jar config_file debug func include_packages output_jar \
-     pypi_index_url nimbus_host nimbus_port storm_cmd_path \
+    "base_jar config_file debug func include_packages include_java_jars \
+     output_jar pypi_index_url nimbus_host nimbus_port storm_cmd_path \
      system_site_packages topology_path topology_jar topology_name verbose \
      wait_time jvm_opts plugins"
 )
@@ -86,6 +90,7 @@ DEFAULTS = Configuration(
     debug=False,
     func=None,
     include_packages=None,
+    include_java_jars=None,
     output_jar=None,
     pypi_index_url=None,
     nimbus_host=None,
