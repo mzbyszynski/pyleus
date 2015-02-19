@@ -20,6 +20,7 @@ import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
 
 import com.yelp.pyleus.bolt.PythonBolt;
+import com.yelp.pyleus.kafka.KafkaSpoutProvider;
 import com.yelp.pyleus.spec.BoltSpec;
 import com.yelp.pyleus.spec.ComponentSpec;
 import com.yelp.pyleus.spec.SpoutSpec;
@@ -39,6 +40,10 @@ public class PyleusTopologyBuilder {
     private static final String PROVIDER_ARG_PFIX = "--provider.";
 
     private static final Map<String, String> providers = new HashMap<String, String>();
+
+    static {
+        providers.put("kafka", KafkaSpoutProvider.class.getCanonicalName());
+    }
 
     public static void handleBolt(final TopologyBuilder builder, final BoltSpec spec,
             final TopologySpec topologySpec) {

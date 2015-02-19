@@ -1,0 +1,20 @@
+# Very simple example of a topology with an external (java-based) spout.
+
+name: java_spout_provider
+
+topology:
+
+    - spout:
+        name: sentence-spout
+        type: sentence
+        output_fields: 
+          - sentence
+        options:
+          sentence: This is a sentence that will be emitted twice a second.
+          sentencesPerMin: 120
+
+    - bolt:
+        name: sentence-consumer-bolt
+        module: sentence_consumer.word_counting_bolt
+        groupings:
+          - shuffle_grouping: sentence-spout
