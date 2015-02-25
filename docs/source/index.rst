@@ -70,6 +70,7 @@ Documentation
    options
    parallelism
    tick
+   external
    logging
    yaml
    install

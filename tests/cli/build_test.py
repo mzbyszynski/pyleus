@@ -177,3 +177,41 @@ class TestBuild(object):
             build._remove_pyleus_base_jar(mock_venv)
 
         assert not mock_remove.called
+
+    @mock.patch.object(build, '_open_jar', autospec=True)
+    @mock.patch.object(os.path, 'isfile', autospec=True)
+    @mock.patch.object(glob, 'glob', autospec=True)
+    def test__extract_plugin_jars_with_jars(self, mock_glob, mock_isfile, mock__open_jar):
+        jars = ["/foo/bar/some.jar", "/bar/other.jar"]
+        mock_glob.side_effect = lambda value: [value]
+        mock_isfile.side_effect = lambda value: True
+        build._extract_plugin_jars(jars, "/tmp")
+        mock__open_jar.assert_any_call(jars[0])
+        mock__open_jar.assert_any_call(jars[1])
+
+    @mock.patch.object(build, '_open_jar', autospec=True)
+    @mock.patch.object(os.path, 'isfile', autospec=True)
+    @mock.patch.object(glob, 'glob', autospec=True)
+    def test__extract_plugin_jars_ignores_non_jars(self, mock_glob, mock_isfile, mock__open_jar):
+        jars = ["/foo/bar/some.jar", "/bar/other.notjar"]
+        mock_glob.side_effect = lambda value: [value]
+        mock_isfile.side_effect = lambda value: True
+        build._extract_plugin_jars(jars, "/tmp")
+        mock__open_jar.assert_called_with(jars[0])
+
+    @mock.patch.object(build, '_open_jar', autospec=True)
+    @mock.patch.object(os.path, 'isdir', autospec=True)
+    @mock.patch.object(glob, 'glob', autospec=True)
+    def test__extract_plugin_jars_expands_dirs(self, mock_glob, mock_isdir, mock__open_jar):
+        jar_dir = "/foo/bar/"
+        jars = ["some.jar", "other.jar"]
+        def glob_result(path):
+            if path == jar_dir:
+                return [jar_dir]
+            else:
+                return jars
+        mock_glob.side_effect = glob_result
+        mock_isdir.side_effect = lambda value: True
+        build._extract_plugin_jars(jars, "/tmp")
+        mock__open_jar.assert_any_call(jars[0])
+        mock__open_jar.assert_any_call(jars[1])
