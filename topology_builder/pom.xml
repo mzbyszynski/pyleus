@@ -14,6 +14,7 @@
     <!-- use UTF-8 for everything -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <storm.version>0.9.6</storm.version>
   </properties>
 
   <repositories>
@@ -33,13 +34,13 @@
     <dependency>
       <groupId>org.apache.storm</groupId>
       <artifactId>storm-core</artifactId>
-      <version>0.9.4</version>
+      <version>${storm.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.storm</groupId>
       <artifactId>storm-kafka</artifactId>
-      <version>0.9.3</version>
+      <version>${storm.version}</version>
     </dependency>
     <dependency>
         <groupId>org.apache.kafka</groupId>
