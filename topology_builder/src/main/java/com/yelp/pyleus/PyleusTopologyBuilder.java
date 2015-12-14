@@ -154,7 +154,7 @@ public class PyleusTopologyBuilder {
 
         Boolean forceFromStart = (Boolean) spec.options.get("from_start");
         if (forceFromStart != null) {
-            config.forceFromStart = forceFromStart;
+            config.ignoreZkOffsets = forceFromStart;
         }
 
         Object startOffsetTime = spec.options.get("start_offset_time");
