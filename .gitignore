@@ -42,3 +42,8 @@ nosetests.xml
 .project
 .pydevproject
 .idea
+.vscode
+
+# venv
+venv
+.cache

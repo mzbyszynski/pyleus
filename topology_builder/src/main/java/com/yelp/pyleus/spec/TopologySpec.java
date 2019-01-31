@@ -34,6 +34,7 @@ public class TopologySpec {
     public Integer executor_receive_buffer_size = -1;
     public Integer executor_send_buffer_size = -1;
     public Integer transfer_buffer_size = -1;
+    public Integer worker_timeout_secs = -1;
 
     public String serializer = MSGPACK_SERIALIZER;
     public String logging_config;

@@ -159,7 +159,12 @@ public class PyleusTopologyBuilder {
 
         Object startOffsetTime = spec.options.get("start_offset_time");
         if (startOffsetTime != null) {
-            config.startOffsetTime = Long.valueOf(startOffsetTime.toString());
+            if (startOffsetTime.toString().equalsIgnoreCase("latest"))
+                config.startOffsetTime = kafka.api.OffsetRequest.LatestTime();
+            else if (startOffsetTime.toString().equalsIgnoreCase("earliest"))
+                config.startOffsetTime = kafka.api.OffsetRequest.EarliestTime();
+            else
+                config.startOffsetTime = Long.valueOf(startOffsetTime.toString());
         }
 
         // support binary data

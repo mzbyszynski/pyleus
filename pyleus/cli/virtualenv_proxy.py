@@ -74,8 +74,8 @@ class VirtualenvProxy(object):
         if self._pypi_index_url is not None:
             cmd += ["-i", self._pypi_index_url]
 
-        if self._use_wheel:
-            cmd += ['--use-wheel']
+        # if self._use_wheel:
+        #     cmd += ['--use-wheel']
 
         _exec_shell_cmd(
             cmd, stdout=self._out_stream, stderr=self._err_stream,
@@ -89,8 +89,8 @@ class VirtualenvProxy(object):
         if self._pypi_index_url is not None:
             cmd += ["-i", self._pypi_index_url]
 
-        if self._use_wheel:
-            cmd += ['--use-wheel']
+        # if self._use_wheel:
+        #     cmd += ['--use-wheel']
 
         _exec_shell_cmd(
             cmd, stdout=self._out_stream, stderr=self._err_stream,
